@@ -13,18 +13,23 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javax.mail.BodyPart;
@@ -42,12 +47,19 @@ public class Frount extends Application {
 
     NetState networker;
     VBox emailList;
+    VBox draftList;
+    VBox sentList;
+    VBox localList;
     int loaded;
-    /*TextArea*/ WebView eDisplay;
+    WebView eDisplay;
+    FileManager fileManager;
+    Email current;
     
     public Frount(){
-    networker=null;   
-    loaded =0;
+        fileManager= new FileManager();
+        networker=null;   
+        loaded =0;
+        current=null;
     }
     
     public void populate(){
@@ -70,6 +82,31 @@ public class Frount extends Application {
         
     }
     
+    public void loadLocal(){
+        draftList.getChildren().clear();
+        for(Email e:fileManager.loadDrafts("local")){
+            Button b= new Button(e.subject+"\n"+e.receiver);
+                b.setOnAction(new localButtonListener(e));
+                draftList.getChildren().add(b);
+        }
+            
+        sentList.getChildren().clear();
+        for(Email e:fileManager.loadSentItems("local")){
+            Button b= new Button(e.subject+"\n"+e.receiver);
+                b.setOnAction(new localButtonListener(e));
+                sentList.getChildren().add(b);
+        }
+        
+        localList.getChildren().clear();
+        for(Email e:fileManager.loadInbox("local")){
+            Button b= new Button(e.subject+"\n"+e.sender);
+                b.setOnAction(new localButtonListener(e));
+                localList.getChildren().add(b);
+        }
+    
+    
+    }
+    
     /**
      * Setup all UI elements on the stage.
      *
@@ -84,19 +121,36 @@ public class Frount extends Application {
         BorderPane pain = new BorderPane();
 
         emailList = new VBox();
-        //ScrollPane scrollList = ;
-        eDisplay = new WebView();//TextArea("hi");
+        draftList = new VBox();
+        sentList = new VBox();
+        localList = new VBox();
+
+        eDisplay = new WebView();
         MenuBar menubar = new MenuBar();
+        TabPane folders= new TabPane();
         ScrollPane scrollPain = new ScrollPane(emailList);
-        
         scrollPain.setPrefWidth(200);
+        Tab in,local,sent,draft;
+        in = new Tab("Inbox");
+        sent = new Tab("Sent");
+        draft = new Tab("Drafts");
+        local = new Tab("Local");
+        in.setContent(scrollPain);
+        sent.setContent(new ScrollPane(sentList));
+        draft.setContent(new ScrollPane(draftList));
+        local.setContent(new ScrollPane(localList));
+        folders.getTabs().add(in);
+        folders.getTabs().add(sent);
+        folders.getTabs().add(draft);
+        //folders.getTabs().add(local);
+        folders.setSide(Side.LEFT);
+        folders.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        loadLocal();
         
         pain.setTop(menubar);
-        pain.setLeft(scrollPain);
+        pain.setLeft(folders);
         pain.setCenter(eDisplay);
         
-        //for(int x=0;x<100;x++)
-        //    emailList.getChildren().add(new Button("Email\nJoe"+x));
         
         Menu file = new Menu("File");
         MenuItem exit= new MenuItem("Exit");
@@ -121,6 +175,7 @@ public class Frount extends Application {
         
         send.setOnAction(new sendMail());
         log.setOnAction(new loginListener());
+        sett.setOnAction(new settingListener());
         
         EventHandler exitHandle = (EventHandler<Event>) (Event a) -> {
             System.exit(0);
@@ -132,9 +187,22 @@ public class Frount extends Application {
         EventHandler refreshHandle = (EventHandler<Event>) (Event a) -> {
             emailList.getChildren().clear();
             loaded=0;
-            populate();
+            if(networker!=null)
+                populate();
+            loadLocal();
         };
         reload.setOnAction(refreshHandle);
+        
+        EventHandler loadHandle = (EventHandler<Event>) (Event a) -> {
+            if(current==null){
+                JOptionPane.showMessageDialog(null, "No message selected");
+                return;
+            }
+            
+            sendMail ss= new sendMail(current);
+            ss.handle(a);                
+        };
+        load.setOnAction(loadHandle);
         
         primaryStage.setScene(new Scene(pain));
         primaryStage.sizeToScene();
@@ -146,7 +214,6 @@ public class Frount extends Application {
         launch(args);
     }
 
-    
     private class loginListener implements EventHandler{
 
         TextField uname;
@@ -214,7 +281,23 @@ public class Frount extends Application {
                 }
             } catch(Exception e){e.printStackTrace();}
         }
+    }
     
+        private class localButtonListener implements EventHandler{
+
+        Email msg;
+        
+        public localButtonListener(Email m){
+            msg=m;
+        }
+        
+        @Override
+        public void handle(Event event) {
+            try{
+                    eDisplay.getEngine().loadContent(msg.content,"text/html");
+                    current=msg;
+            } catch(Exception e){e.printStackTrace();}
+        }
     }
     
     private class sendMail implements EventHandler{
@@ -222,27 +305,27 @@ public class Frount extends Application {
         TextField toAddr;
         TextField fromAddr;
         TextField subject;
-        TextArea  compose;
+        HTMLEditor  compose;
         PasswordField pass;
         Button send;
-        
+        Button save;
+        Email pre;
+        public sendMail(){pre=null;}
+        public sendMail(Email e){pre=e;}
         
         @Override
         public void handle(Event event) {
-            if(networker == null){
-                JOptionPane.showMessageDialog(null, "Not logged in!");
-                return;
-            }
             
             Stage stage = new Stage();
-            stage.setTitle("Login");
+            stage.setTitle("Compose");
             VBox things= new VBox();
             toAddr=new TextField();
             fromAddr=new TextField();
             subject=new TextField();
-            compose=new TextArea();
+            compose=new HTMLEditor();
             pass = new PasswordField();
             send=new Button("Send");
+            save=new Button("Save Draft");
             things.getChildren().add(new Text("To:"));
             things.getChildren().add(toAddr);
             things.getChildren().add(new Text("From:"));
@@ -252,9 +335,32 @@ public class Frount extends Application {
             things.getChildren().add(compose);
             things.getChildren().add(new Text("Password:"));
             things.getChildren().add(pass);
-            things.getChildren().add(send);
+            HBox buttons= new HBox();
+            buttons.getChildren().add(send);
+            buttons.getChildren().add(save);
+            things.getChildren().add(buttons);
+            
+            if(pre!=null){
+            toAddr.setText(pre.receiver);
+            subject.setText(pre.subject);
+            compose.setHtmlText(pre.content);
+            }
+            
+            EventHandler saveHandler = (EventHandler<ActionEvent>) (ActionEvent a) -> {
+                Email e = new Email();
+                e.sender="local";//fromAddr.getText();
+                e.receiver=toAddr.getText();
+                e.subject=subject.getText();
+                e.content=compose.getHtmlText();
+                fileManager.saveDraft(e);
+                JOptionPane.showMessageDialog(null, "Draft saved");
+            };
             
             EventHandler login = (EventHandler<ActionEvent>) (ActionEvent a) -> {
+                if(networker == null){
+                    JOptionPane.showMessageDialog(null, "Not logged in!");
+                    return;
+                }
                 stage.close();
                 try{
                 Message out = networker.getBlank();
@@ -262,16 +368,23 @@ public class Frount extends Application {
                 out.setFrom(new InternetAddress(fromAddr.getText()));
                 out.addRecipient(Message.RecipientType.TO, new InternetAddress(toAddr.getText()));
                 out.setSubject(subject.getText());
-                out.setText(compose.getText());
+                out.setText(compose.getHtmlText());
                 
                 networker.sendMail(out,pass.getText());
-                    JOptionPane.showMessageDialog(null, "Mail Sent!");
+                JOptionPane.showMessageDialog(null, "Mail Sent!");
+                Email e = new Email();
+                e.sender="local";
+                e.receiver=toAddr.getText();
+                e.subject=subject.getText();
+                e.content=compose.getHtmlText();
+                fileManager.saveSentEmail(e);
                 }catch (Exception e){
                     JOptionPane.showMessageDialog(null, "Send Mail failed");
                 }
             };
             
             send.setOnAction(login);
+            save.setOnAction(saveHandler);
             
             stage.setScene(new Scene(things));
             stage.sizeToScene();
@@ -280,5 +393,69 @@ public class Frount extends Application {
     
     }
     
+    private class settingListener implements EventHandler{
+
+
+        
+        @Override
+        public void handle(Event event) {
+            Stage stage = new Stage();
+            stage.setTitle("Settings");
+            VBox things= new VBox();
+            TextField protocol=new TextField();
+            TextField host=new TextField();
+            TextField mport=new TextField();
+            TextField sport=new TextField();
+            TextField tick=new TextField();
+            CheckBox imaptls = new CheckBox("IMAP starttls");
+            CheckBox poptls = new CheckBox("POP3 starttls");
+            CheckBox smtptls = new CheckBox("SMTP starttls");
+            Button save = new Button("Save");
+            
+            //populate with netstate
+            protocol.setText(NetState.protocol);
+            host.setText(NetState.host);
+            mport.setText(NetState.port+"");
+            sport.setText(NetState.sendPort+"");
+            tick.setText(NetState.keepAlive+"");
+            imaptls.setSelected(NetState.imaptls);
+            poptls.setSelected(NetState.poptls);
+            smtptls.setSelected(NetState.smtptls);
+
+            
+            things.getChildren().add(new Text("Protocol:"));
+            things.getChildren().add(protocol);
+            things.getChildren().add(new Text("Host:"));
+            things.getChildren().add(host);
+            things.getChildren().add(new Text("Mail Port:"));
+            things.getChildren().add(mport);
+            things.getChildren().add(new Text("Send Port:"));
+            things.getChildren().add(sport);
+            things.getChildren().add(new Text("Heartbeat:"));
+            things.getChildren().add(tick);
+            things.getChildren().add(imaptls);
+            things.getChildren().add(poptls);
+            things.getChildren().add(smtptls);
+            things.getChildren().add(save);
+            
+            EventHandler login = (EventHandler<ActionEvent>) (ActionEvent a) -> {
+                stage.close();
+                NetState.protocol=protocol.getText();
+                NetState.host=host.getText();
+                NetState.port=Integer.parseInt(mport.getText());
+                NetState.sendPort=Integer.parseInt(sport.getText());
+                NetState.keepAlive=Integer.parseInt(tick.getText());
+                NetState.imaptls=imaptls.selectedProperty().get();
+                NetState.poptls=poptls.selectedProperty().get();
+                NetState.smtptls=smtptls.selectedProperty().get();
+            };
+            save.setOnAction(login);
+            
+            stage.setScene(new Scene(things));
+            stage.sizeToScene();
+            stage.show();
+        }
+    
+    }
     
 }

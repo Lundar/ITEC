@@ -1,4 +1,4 @@
-package Test;
+package cs241;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,8 +16,8 @@ import java.util.logging.Logger;
 
 /**
  * 
- * @author Tongxin Lin
- * @version 2.0
+ * @author Tongxin
+ * @version 2.1
  */
 public class FileManager {    
     final private String rootFolder = "Email_Client";
@@ -120,8 +120,9 @@ public class FileManager {
      * @param e an Email object
      */
     public void deleteEmail(Email e){
-        //currently use file url directly
-        //file url should be converted from http
+        //e.location should be http,then convert it to local
+        //eg: String flocation = toLocal(e.location);
+        //String folderURL = new File(flocation).getParent();
         String folderURL = new File(e.location).getParent();
         File folder = new File(folderURL.substring(6));
         deleteFolder(folder);
@@ -154,6 +155,7 @@ public class FileManager {
         } catch (IOException ex) {
             Logger.getLogger(FileManager.class.getName()).log(Level.SEVERE, null, ex);
         }
+        //should convert fURL to http
         String fURL = new File(fAttachment.getPath()).toURI().toURL().toString();
         return fURL;
     }
@@ -181,7 +183,7 @@ public class FileManager {
     
     /**
      * the process of saving an Email
-     * @param e an email that
+     * @param e an email that will be saved
      * @param f the file for saving a email
      * @param info information for an email subject,date etc.
      */
@@ -207,7 +209,8 @@ public class FileManager {
         String Top = rootFolder + emails + username + "\\" + directory;
         Email[] emailList;
         File pathTop = new File(Top);
-        String[] paths = pathTop.list();                
+        String[] paths = pathTop.list();
+        //null pointer ex
         if(paths != null){
             emailList = new Email[paths.length];
             for (int i=0;i<paths.length;i++){
@@ -226,7 +229,7 @@ public class FileManager {
                 try {
                     File f = new File(Top + "\\" + paths[i] + "\\email.html");
                     String flocation = new File(f.getPath()).toURI().toURL().toString();
-                    //need to convert file url to http url;
+                    //need to convert file url to http
                     emailList[i].location = flocation;
                     emailList[i].content = readEmailContent(f);
                 } catch (MalformedURLException ex) {
@@ -243,15 +246,12 @@ public class FileManager {
      * delete a folder for an email
      * @param folder the targeted folder
      */
-    private static void deleteFolder(File folder){
-        File[] files = folder.listFiles();
+    private static void deleteFolder(File folder){ //Credit: http://stackoverflow.com/questions/779519/delete-files-recursively-in-java
+        //I don't know how to import the FileUtils class from apache's commons io, so choose this recursion method
         if(folder.exists()){
-            for(File f: files){
-                if(f.isDirectory()){
-                    deleteFolder(f);
-                } else {
-                    f.delete();
-                }
+            for(File f: folder.listFiles()){
+                if(f.isDirectory()) deleteFolder(f);
+                else f.delete();
             }
             folder.delete();
         }
@@ -263,7 +263,8 @@ public class FileManager {
      * @param dest   destination file
      * @throws IOException if the source file did not transfered properly or the channels did not closed properly
      */
-    private static void copyFile(File source,File dest) throws IOException{
+    private static void copyFile(File source,File dest) throws IOException{ //Credit: http://examples.javacodegeeks.com/core-java/io/file/4-ways-to-copy-file-in-java/
+        //simple and fast by using filechannel
         FileChannel inputChannel = null;
         FileChannel outputChannel = null;
         try {

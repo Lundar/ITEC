@@ -1,19 +1,19 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package cs241;
 
-/**
- *
- * @author Zeus
- */
 public class Email {
-    public String subject;
-    public String content;
-    public String sender;
-    public String cc;
     
+    //location = http url of the email file,currently use file url
+    //content = html code
+    public String subject,content,sender,receiver,cc,date,location;
+    
+    public Email(){
+        this.subject = "";
+        this.sender = "";
+        this.receiver = "";
+        this.content = "";
+        this.cc = "";
+        this.date = "";
+        this.location = "";
+    }
+       
 }

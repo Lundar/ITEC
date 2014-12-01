@@ -17,32 +17,40 @@ import javax.mail.internet.MimeMessage;
  * @author Zeus
  */
 public class NetState {
-    String protocol;
-    String host;
-    int port;
-    int sendPort;
+    static String protocol;
+    static String host;
+    static int port;
+    static int sendPort;
     String username;
-    int keepAlive;
+    static int keepAlive;
+    static boolean imaptls;
+    static boolean smtptls;
+    static boolean poptls;
     ArrayList<Message> messages;
     
     Session session;
     Store store;
     Folder inbox;
     
-    public NetState(String uname){
+    static{
     protocol="imap";
     host="mymail.clarkson.edu";
     port=143;
     sendPort=587;
     keepAlive = 300000;
+    imaptls=true;
+    poptls=true;
+    smtptls=true;
+    }  
+    
+    
+    public NetState(String uname){
     
     session=null;
     store=null;
     inbox=null;
     username=uname;
     messages=new ArrayList();
-    
-    
     
     }
     
@@ -72,8 +80,12 @@ public class NetState {
     Properties props = new Properties();
         props.setProperty("mail.store.protocol", protocol);
         //props.put("mail.debug", "true");
-        props.put("mail.imap.starttls.enable","true");
-        props.put("mail.smtp.starttls.enable","true");
+        if(imaptls)
+            props.put("mail.imap.starttls.enable","true");
+        if(smtptls)
+            props.put("mail.smtp.starttls.enable","true");
+        if(poptls)
+            props.put("mail.pop3.starttls.enable","true");
 
         try {
             session = Session.getInstance(props, null);
