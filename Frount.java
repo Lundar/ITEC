@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package cs241;
 
 import javafx.application.Application;
@@ -41,7 +35,7 @@ import javax.mail.internet.InternetAddress;
 import javax.swing.JOptionPane;
 /**
  *
- * @author Zeus
+ * @author Austin Lund
  */
 public class Frount extends Application {
 
