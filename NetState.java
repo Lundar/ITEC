@@ -43,7 +43,10 @@ public class NetState {
     smtptls=true;
     }  
     
-    
+    /**
+     * Create a new Netstate with a given username.
+     * @param uname username to use
+     */
     public NetState(String uname){
     
     session=null;
@@ -54,11 +57,21 @@ public class NetState {
     
     }
     
-    
+    /**
+     * Get a new blank message to be filled and sent
+     * @return an empty message
+     */
     public MimeMessage getBlank(){
         return new MimeMessage(session);
     }
     
+    /**
+     * Sends an EMail. 
+     * @param m the Message to be sent
+     * @param pass password for reauthentication
+     * @return always returns false
+     * @throws Exception handle possible network exceptions
+     */
     public boolean sendMail(Message m, String pass) throws Exception{
     
         Transport trans = session.getTransport();
@@ -69,13 +82,24 @@ public class NetState {
     return false;
     }
     
-    public void reload() throws MessagingException{
+    /**
+     * Reloads the inbox.
+     */
+    public void reload(){
         messages.clear();
+        try{
         Message[] mm=inbox.getMessages();
             for(Message n: mm)
                 messages.add(n);
+        }catch(Exception e){}
     }
     
+    /**
+     * Starts a connection and populates the inbox.
+     * This should be called almost imeadiatly after creation. 
+     * @param password password for authentication
+     * @return true if connection was successful 
+     */
     public boolean startSession(String password){
     Properties props = new Properties();
         props.setProperty("mail.store.protocol", protocol);
@@ -109,34 +133,9 @@ public class NetState {
         return false;
     }
     
-    /*public void testMail(){
-    Properties props = new Properties();
-        props.setProperty("mail.store.protocol", "imap");
-        props.put("mail.debug", "true");
-        props.put("mail.imap.starttls.enable","true");
-        //props.put("mail.imaps.port","143");
-        //props.put("mail.imap.auth", "true");
-        try {
-            Session session = Session.getInstance(props, null);
-            Store store = session.getStore();
-            store.connect("mymail.clarkson.edu",143, "lundar", "");
-            Folder inbox = store.getFolder("INBOX");
-            inbox.open(Folder.READ_ONLY);
-            Message msg = inbox.getMessage(inbox.getMessageCount());
-            Address[] in = msg.getFrom();
-            for (Address address : in) {
-                System.out.println("FROM:" + address.toString());
-            }
-            Multipart mp = (Multipart) msg.getContent();
-            BodyPart bp = mp.getBodyPart(0);
-            System.out.println("SENT DATE:" + msg.getSentDate());
-            System.out.println("SUBJECT:" + msg.getSubject());
-            System.out.println("CONTENT:" + bp.getContent());
-        } catch (Exception mex) {
-            mex.printStackTrace();
-        }
-    }*/
-    
+    /**
+     * Thread to maintain connection
+     */
     private class HeartBeet extends Thread{
     
         public HeartBeet(){
@@ -164,8 +163,4 @@ public class NetState {
     
     }
     
-   /* public static void main(String[] args) {
-        NetState n= new NetState("");
-        n.testMail();
-    }*/
 }

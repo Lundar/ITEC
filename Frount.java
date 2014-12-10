@@ -55,6 +55,9 @@ public class Frount extends Application {
     FileManager fileManager;
     Email current;
     
+    /**
+     * Initalize lists 
+     */
     public Frount(){
         fileManager= new FileManager();
         networker=null;   
@@ -62,12 +65,10 @@ public class Frount extends Application {
         current=null;
     }
     
+    /**
+     * populates the list of email buttons from the server
+     */
     public void populate(){
-        /*for(Message m:networker.messages){
-            try{
-            emailList.getChildren().add(new Button(m.getSubject()+"\n"+m.getFrom()[0]));
-            }catch (MessagingException e) {e.printStackTrace();}
-        }*/
         for(int x=1;x<21;x++){
             try{
                 if(x+loaded < networker.messages.size()){
@@ -82,6 +83,9 @@ public class Frount extends Application {
         
     }
     
+    /**
+     * clear and repopulate the local folders from the file system
+     */
     public void loadLocal(){
         draftList.getChildren().clear();
         for(Email e:fileManager.loadDrafts("local")){
@@ -187,8 +191,10 @@ public class Frount extends Application {
         EventHandler refreshHandle = (EventHandler<Event>) (Event a) -> {
             emailList.getChildren().clear();
             loaded=0;
-            if(networker!=null)
+            if(networker!=null){
+                networker.reload();
                 populate();
+            }
             loadLocal();
         };
         reload.setOnAction(refreshHandle);
@@ -214,6 +220,9 @@ public class Frount extends Application {
         launch(args);
     }
 
+    /**
+     * Event Handler for logging in action.
+     */
     private class loginListener implements EventHandler{
 
         TextField uname;
@@ -255,7 +264,10 @@ public class Frount extends Application {
     
     }
     
-    
+    /**
+     * Event handler for each email "Button"
+     * handles loading and displaying emails from the server
+     */
     private class mailButtonListener implements EventHandler{
 
         Message msg;
@@ -283,6 +295,9 @@ public class Frount extends Application {
         }
     }
     
+    /**
+     * Event handler for locally stored emails
+     */
         private class localButtonListener implements EventHandler{
 
         Email msg;
@@ -300,6 +315,10 @@ public class Frount extends Application {
         }
     }
     
+        /**
+         * Event Handler for compose Email button
+         * creates a compose email window
+         */
     private class sendMail implements EventHandler{
 
         TextField toAddr;
@@ -393,10 +412,12 @@ public class Frount extends Application {
     
     }
     
+    /**
+     * settings Event handler
+     * creates a new window for settings operations
+     */
     private class settingListener implements EventHandler{
 
-
-        
         @Override
         public void handle(Event event) {
             Stage stage = new Stage();
